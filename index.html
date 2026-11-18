@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Dorado Club 3D</title>
+  <meta name="description" content="Modelo 3D interactivo de Dorado Club · Av. Martín Marciales, Pueblo Nuevo, San Cristóbal, Táchira.">
+  <meta name="theme-color" content="#0f1115">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='28' fill='%23d4af37'/><path d='M22 18h12a14 14 0 0 1 0 28H22z' fill='none' stroke='%230f1115' stroke-width='6'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+      "3d-tiles-renderer": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.3/build/index.js",
+      "3d-tiles-renderer/plugins": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.3/build/index.plugins.js",
+      "3d-tiles-renderer/three": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.3/build/index.three.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Pantalla de carga -->
+  <div id="loader">
+    <div class="loader-card">
+      <div class="logo-mark">D</div>
+      <h1>DORADO <span>CLUB</span></h1>
+      <p>Construyendo el modelo 3D…</p>
+      <div class="bar"><i id="loader-bar"></i></div>
+    </div>
+  </div>
+
+  <!-- Panel principal -->
+  <aside id="panel" class="glass">
+    <header>
+      <div class="brand">
+        <div class="logo-mark sm">D</div>
+        <div>
+          <h1>DORADO <span>CLUB</span></h1>
+          <p class="addr">Av. Martín Marciales · Pueblo Nuevo<br>San Cristóbal, Táchira</p>
+        </div>
+      </div>
+      <button id="panel-toggle" class="icon-btn" aria-label="Mostrar u ocultar panel">☰</button>
+    </header>
+
+    <div class="panel-body">
+      <section>
+        <h2>Explorar</h2>
+        <div class="btn-row">
+          <button id="btn-overview" class="btn">🏟️ Vista general</button>
+          <button id="btn-tour" class="btn gold">▶ Recorrido</button>
+          <button id="btn-walk" class="btn">🚶 Caminar</button>
+        </div>
+        <ul id="poi-list" class="poi-list"></ul>
+      </section>
+
+      <section>
+        <h2>Hora del día <small id="time-label">10:00</small></h2>
+        <input id="time" type="range" min="0" max="24" step="0.25" value="10">
+        <div class="btn-row">
+          <button class="btn sm" data-time="7">Mañana</button>
+          <button class="btn sm" data-time="12.5">Mediodía</button>
+          <button class="btn sm" data-time="17.8">Atardecer</button>
+          <button class="btn sm" data-time="21">Noche</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Capas</h2>
+        <label class="switch"><input type="checkbox" id="lyr-terrain" checked><span></span>Satélite y relieve</label>
+        <label class="switch"><input type="checkbox" id="lyr-osm" checked><span></span>Edificios vecinos (OSM)</label>
+        <label class="switch"><input type="checkbox" id="lyr-labels" checked><span></span>Etiquetas</label>
+        <label class="switch"><input type="checkbox" id="lyr-club" checked><span></span>Modelo del club</label>
+      </section>
+
+      <section>
+        <h2>Google 3D <small>(opcional)</small></h2>
+        <p class="hint">Fotogrametría real de Google Earth (Photorealistic 3D Tiles). Necesita una API key gratuita de Google Maps Platform con <b>Map Tiles API</b> activada.</p>
+        <div class="row">
+          <input id="g-key" type="password" placeholder="API key de Google" autocomplete="off">
+          <button id="btn-google" class="btn">Activar</button>
+        </div>
+        <label class="switch"><input type="checkbox" id="g-flatten" checked><span></span>Aplanar terreno bajo el club</label>
+        <p id="g-status" class="hint"></p>
+      </section>
+
+      <section>
+        <h2>Herramientas</h2>
+        <div class="btn-row">
+          <button id="btn-edit" class="btn">✏️ Modo edición</button>
+          <button id="btn-shot" class="btn">📷 Captura</button>
+          <button id="btn-share" class="btn">🔗 Compartir</button>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- Panel de edición -->
+  <aside id="editor" class="glass hidden">
+    <header>
+      <h2>Modo edición</h2>
+      <button id="edit-close" class="icon-btn" aria-label="Cerrar">✕</button>
+    </header>
+    <div class="panel-body">
+      <p class="hint">Haz clic en un elemento del club para seleccionarlo. Arrastra las flechas para moverlo. Usa la foto satelital como guía.</p>
+      <label>Elemento
+        <select id="ed-select"></select>
+      </label>
+      <div class="btn-row">
+        <button id="ed-move" class="btn sm gold">Mover (T)</button>
+        <button id="ed-rotate" class="btn sm">Rotar (R)</button>
+      </div>
+      <div class="grid3">
+        <label>X (m)<input id="ed-x" type="number" step="0.5"></label>
+        <label>Z (m)<input id="ed-z" type="number" step="0.5"></label>
+        <label>Giro°<input id="ed-rot" type="number" step="1"></label>
+        <label>Ancho<input id="ed-w" type="number" step="0.5"></label>
+        <label>Fondo<input id="ed-d" type="number" step="0.5"></label>
+        <label>&nbsp;<button id="ed-apply" class="btn sm">Aplicar</button></label>
+      </div>
+      <label class="slider">Transparencia del césped base (ver satélite)
+        <input id="ed-base" type="range" min="0" max="1" step="0.05" value="0.35">
+      </label>
+      <h3>Ubicación del club</h3>
+      <div class="grid3">
+        <label>Latitud<input id="geo-lat" type="number" step="0.00001"></label>
+        <label>Longitud<input id="geo-lon" type="number" step="0.00001"></label>
+        <label>Rumbo°<input id="geo-heading" type="number" step="0.5"></label>
+      </div>
+      <div class="btn-row">
+        <button id="geo-apply" class="btn sm gold">Aplicar ubicación</button>
+      </div>
+      <h3>Guardar</h3>
+      <div class="btn-row">
+        <button id="ed-export" class="btn sm">⬇ Exportar JSON</button>
+        <label class="btn sm file">⬆ Importar<input id="ed-import" type="file" accept="application/json"></label>
+        <button id="ed-reset" class="btn sm danger">Restablecer</button>
+      </div>
+      <p class="hint">Los cambios se guardan en este navegador. Exporta el JSON y pégalo en <code>js/layout.js</code> para publicarlos.</p>
+    </div>
+  </aside>
+
+  <!-- Tarjeta de información -->
+  <div id="info" class="glass hidden">
+    <button id="info-close" class="icon-btn" aria-label="Cerrar">✕</button>
+    <h3 id="info-title"></h3>
+    <p id="info-text"></p>
+  </div>
+
+  <div id="status" class="chip hidden"></div>
+  <div id="compass" title="Norte"><i>N</i></div>
+  <div id="walk-help" class="chip hidden">W A S D para caminar · Shift para correr · Esc para salir</div>
+
+  <footer id="attribution">
+    Imágenes © Esri, Vantor (Maxar), Earthstar Geographics · Relieve: AWS Terrain Tiles (Mapzen, SRTM) · Edificios © colaboradores de OpenStreetMap<span id="g-attrib"></span>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
